@@ -4,17 +4,26 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, rmSync } from 'node:fs';
 
+const CDP_URL = 'http://127.0.0.1:9222';
 const TMP_DIR = join(tmpdir(), `wmb-gpt-diag-${Date.now()}`);
 let bm: BrowserManager;
+let browserAvailable = false;
 
 beforeAll(async () => {
   mkdirSync(TMP_DIR, { recursive: true });
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch {
+    browserAvailable = false;
+  }
+  if (!browserAvailable) return;
   bm = new BrowserManager({
     profileDir: join(TMP_DIR, 'p'),
     startupTimeout: 30_000,
     idleShutdown: 0,
     loginTimeout: 300,
-    cdpUrl: 'http://127.0.0.1:9222',
+    cdpUrl: CDP_URL,
     mode: 'attach',
   });
 }, 30_000);
@@ -26,6 +35,7 @@ afterAll(async () => {
 
 describe('ChatGPT API diagnosis', () => {
   it('test /backend-api/conversation with minimal request', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://chatgpt.com');
 
     // Check if we have auth tokens

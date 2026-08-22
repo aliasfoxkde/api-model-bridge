@@ -1,6 +1,7 @@
 /**
  * Discover real API endpoints for standard providers.
  * Uses browser console to intercept network requests.
+ * Requires Chrome with --remote-debugging-port=9222.
  */
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import { BrowserManager } from '../../src/browser/manager.js';
@@ -13,8 +14,10 @@ const AUTH_PROFILES_PATH = join(
   process.env.HOME ?? '~',
   'Documents/zero0330/openclaw-zero-token/.openclaw-upstream-state/agents/main/agent/auth-profiles.json'
 );
+const CDP_URL = 'http://127.0.0.1:9222';
 
 let bm: BrowserManager;
+let browserAvailable = false;
 
 function parseCookies(cookieStr: string, domain: string) {
   return cookieStr.split(';').map(s => s.trim()).filter(Boolean).map(pair => {
@@ -32,13 +35,24 @@ function loadAuthProfile(name: string): any {
 }
 
 beforeAll(async () => {
+  // Check browser availability first
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch { /* no browser */ }
+
+  if (!browserAvailable) {
+    console.log('  Skipping: Chrome CDP not reachable. Run Chrome with --remote-debugging-port=9222');
+    return;
+  }
+
   mkdirSync(TMP_DIR, { recursive: true });
   bm = new BrowserManager({
     profileDir: join(TMP_DIR, 'p'),
     startupTimeout: 30_000,
     idleShutdown: 0,
     loginTimeout: 300,
-    cdpUrl: 'http://127.0.0.1:9222',
+    cdpUrl: CDP_URL,
     mode: 'attach',
   });
 }, 30_000);
@@ -50,6 +64,7 @@ afterAll(async () => {
 
 describe('Discover Qwen real API', () => {
   it('try common chat endpoints', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('qwen-web:default');
     const ctx = await bm.ensureBrowser();
     await ctx.addCookies(parseCookies(profile.cookie, '.qwen.ai'));
@@ -112,6 +127,7 @@ describe('Discover Qwen real API', () => {
 
 describe('Discover Doubao real API', () => {
   it('try common chat endpoints', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('doubao-web:default');
     const ctx = await bm.ensureBrowser();
     await ctx.addCookies(parseCookies(profile.cookie, '.doubao.com'));
@@ -149,6 +165,7 @@ describe('Discover Doubao real API', () => {
 
 describe('Discover GLM real API', () => {
   it('try common chat endpoints', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('glm-web:default');
     const ctx = await bm.ensureBrowser();
     await ctx.addCookies(parseCookies(profile.cookie, '.chatglm.cn'));

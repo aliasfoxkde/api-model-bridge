@@ -1,6 +1,9 @@
 /**
  * Direct provider testing — calls provider.chat() directly to diagnose issues.
  * No HTTP layer, no formatting — raw StreamEvent output.
+ *
+ * Requires Chrome with --remote-debugging-port=9222 running.
+ * These tests are skipped if Chrome is not available.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { BrowserManager } from '../../src/browser/manager.js';
@@ -20,8 +23,19 @@ const TMP_DIR = join(tmpdir(), `wmb-direct-${Date.now()}`);
 
 let browserManager: BrowserManager;
 let authStore: AuthStore;
+let browserAvailable = false;
 
 beforeAll(async () => {
+  // Check if Chrome CDP is reachable
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch {
+    browserAvailable = false;
+  }
+
+  if (!browserAvailable) return;
+
   mkdirSync(TMP_DIR, { recursive: true });
 
   browserManager = new BrowserManager({
@@ -51,6 +65,7 @@ async function collectEvents(iterable: AsyncIterable<StreamEvent>): Promise<Stre
 
 describe('Direct: DeepSeek', () => {
   it('chat yields text_delta events', async () => {
+    if (!browserAvailable) return;
     const getPage = (origin: string) => browserManager.getPageForOrigin(origin);
     const browserFetch = (url: string, init: RequestInit) => browserManager.fetchInBrowser(url, init);
     const provider = new DeepSeekProvider(authStore, browserFetch, getPage);
@@ -86,6 +101,7 @@ describe('Direct: DeepSeek', () => {
 
 describe('Direct: Claude', () => {
   it('chat yields text_delta events', async () => {
+    if (!browserAvailable) return;
     const getPage = (origin: string) => browserManager.getPageForOrigin(origin);
     const browserFetch = (url: string, init: RequestInit) => browserManager.fetchInBrowser(url, init);
     const provider = new ClaudeProvider(authStore, browserFetch, getPage);
@@ -116,6 +132,7 @@ describe('Direct: Claude', () => {
 
 describe('Direct: Qwen', () => {
   it('chat yields text_delta events', async () => {
+    if (!browserAvailable) return;
     const browserFetch = (url: string, init: RequestInit) => browserManager.fetchInBrowser(url, init);
     const provider = new QwenProvider(authStore, browserFetch);
 
@@ -145,6 +162,7 @@ describe('Direct: Qwen', () => {
 
 describe('Direct: Doubao', () => {
   it('chat yields text_delta events', async () => {
+    if (!browserAvailable) return;
     const browserFetch = (url: string, init: RequestInit) => browserManager.fetchInBrowser(url, init);
     const provider = new DoubaoProvider(authStore, browserFetch);
 

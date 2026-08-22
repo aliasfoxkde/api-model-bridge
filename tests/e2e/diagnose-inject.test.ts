@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, rmSync, readFileSync } from 'node:fs';
 
+const CDP_URL = 'http://127.0.0.1:9222';
 const TMP_DIR = join(tmpdir(), `wmb-inject-${Date.now()}`);
 const AUTH_PROFILES_PATH = join(
   process.env.HOME ?? '~',
@@ -14,6 +15,7 @@ const AUTH_PROFILES_PATH = join(
 );
 
 let bm: BrowserManager;
+let browserAvailable = false;
 
 /** Parse a cookie string like "name1=val1; name2=val2" into playwright cookie objects */
 function parseCookies(cookieStr: string, domain: string): Array<{
@@ -44,12 +46,19 @@ function loadAuthProfile(name: string): any {
 
 beforeAll(async () => {
   mkdirSync(TMP_DIR, { recursive: true });
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch {
+    browserAvailable = false;
+  }
+  if (!browserAvailable) return;
   bm = new BrowserManager({
     profileDir: join(TMP_DIR, 'p'),
     startupTimeout: 30_000,
     idleShutdown: 0,
     loginTimeout: 300,
-    cdpUrl: 'http://127.0.0.1:9222',
+    cdpUrl: CDP_URL,
     mode: 'attach',
   });
 }, 30_000);
@@ -61,6 +70,7 @@ afterAll(async () => {
 
 describe('Cookie injection + API test', () => {
   it('DeepSeek: inject cookies + use bearer token', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('deepseek-web:default');
     console.log('  DeepSeek profile keys:', Object.keys(profile));
 
@@ -92,6 +102,7 @@ describe('Cookie injection + API test', () => {
   }, 30_000);
 
   it('Claude: inject cookies + test organizations', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('claude-web:default');
     console.log('  Claude profile keys:', Object.keys(profile));
 
@@ -119,6 +130,7 @@ describe('Cookie injection + API test', () => {
   }, 30_000);
 
   it('Qwen: inject cookies + test chat', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('qwen-web:default');
     console.log('  Qwen profile keys:', Object.keys(profile));
 
@@ -145,6 +157,7 @@ describe('Cookie injection + API test', () => {
   }, 60_000);
 
   it('Doubao: inject cookies + test chat', async () => {
+    if (!browserAvailable) return;
     const profile = loadAuthProfile('doubao-web:default');
     console.log('  Doubao profile keys:', Object.keys(profile));
 

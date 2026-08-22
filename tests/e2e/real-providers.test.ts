@@ -12,6 +12,7 @@ import { createApp } from '../../src/server.js';
 import { ProviderRegistry } from '../../src/core/registry.js';
 import { AuthStore } from '../../src/auth/store.js';
 import { BrowserManager } from '../../src/browser/manager.js';
+import { MockProvider } from '../helpers/mock-provider.js';
 import { ClaudeProvider } from '../../src/providers/claude/index.js';
 import { ChatGPTProvider } from '../../src/providers/chatgpt/index.js';
 import { DeepSeekProvider } from '../../src/providers/deepseek/index.js';
@@ -74,6 +75,7 @@ let serverUrl: string;
 let serverClose: () => void;
 let profiles: Record<string, any>;
 const authenticatedProviders = new Set<string>();
+let browserAvailable = false;
 
 beforeAll(async () => {
   // Check Chrome CDP
@@ -82,9 +84,53 @@ beforeAll(async () => {
     const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
     cdpOk = res.ok;
   } catch { /* ignored */ }
-  if (!cdpOk) throw new Error(`Chrome CDP not reachable at ${CDP_URL}`);
+  browserAvailable = cdpOk;
 
   mkdirSync(STATE_DIR, { recursive: true });
+
+  // Always set up server with mock providers (for infrastructure tests)
+  registry = new ProviderRegistry();
+  authStore = new AuthStore(STATE_DIR);
+
+  // Register mock providers for infrastructure tests
+  registry.register(new MockProvider('claude-web', {
+    authenticated: true,
+    models: [{ id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', contextWindow: 1000000, maxOutput: 8192 }],
+  }));
+  registry.register(new MockProvider('deepseek-web', {
+    authenticated: true,
+    models: [{ id: 'deepseek-v4', name: 'DeepSeek V4', contextWindow: 128000, maxOutput: 8192 }],
+  }));
+  registry.register(new MockProvider('kimi-web', {
+    authenticated: true,
+    models: [{ id: 'kimi-k2.5', name: 'Kimi K2.5', contextWindow: 256000, maxOutput: 8192 }],
+  }));
+  registry.register(new MockProvider('qwen-web', {
+    authenticated: true,
+    models: [{ id: 'qwen-3.5-plus', name: 'Qwen 3.5 Plus', contextWindow: 262144, maxOutput: 8192 }],
+  }));
+  registry.register(new MockProvider('glm-web', {
+    authenticated: true,
+    models: [{ id: 'glm-5', name: 'GLM-5', contextWindow: 128000, maxOutput: 8192 }],
+  }));
+  registry.register(new MockProvider('doubao-web', {
+    authenticated: true,
+    models: [{ id: 'doubao-seed-2.0-pro', name: 'Doubao Seed 2.0 Pro', contextWindow: 256000, maxOutput: 8192 }],
+  }));
+
+  // Start server
+  const app = createApp({ registry, authStore, authToken: null });
+  const server = serve({ fetch: app.fetch, port: 0 });
+  const addr = server.address() as AddressInfo;
+  serverUrl = `http://127.0.0.1:${addr.port}`;
+  serverClose = () => server.close();
+
+  // Browser-specific setup (only if browser is available)
+  if (!browserAvailable) {
+    console.log(`\n  E2E server at ${serverUrl} (no browser — real provider tests will be skipped)`);
+    return;
+  }
+
   profiles = loadAuthProfiles();
 
   browserManager = new BrowserManager({
@@ -95,8 +141,6 @@ beforeAll(async () => {
     cdpUrl: CDP_URL,
     mode: 'attach',
   });
-
-  authStore = new AuthStore(STATE_DIR);
 
   // Inject cookies from auth-profiles into browser context
   const ctx = await browserManager.ensureBrowser();
@@ -119,11 +163,9 @@ beforeAll(async () => {
     if (profile?.cookie) {
       const cookies = parseCookies(profile.cookie, domain);
       if (cookies.length > 0) {
-        // Inject cookies one-by-one, skip invalid ones
         let injected = 0;
         for (const cookie of cookies) {
           try {
-            // Skip cookies with empty names or values that might cause issues
             if (!cookie.name || cookie.name.length === 0) continue;
             await ctx.addCookies([cookie]);
             injected++;
@@ -140,20 +182,18 @@ beforeAll(async () => {
     }
   }
 
-  // Browser callbacks
   const browserFetch = (url: string, init: RequestInit) =>
     browserManager.fetchInBrowser(url, init);
   const getPage = (origin: string) =>
     browserManager.getPageForOrigin(origin);
 
-  // Register all providers
+  // Re-register with real providers
   registry = new ProviderRegistry();
 
   const claudeProvider = new ClaudeProvider(authStore, browserFetch, getPage);
   registry.register(claudeProvider);
 
   const deepseekProvider = new DeepSeekProvider(authStore, browserFetch, getPage);
-  // Inject bearer token for DeepSeek
   if (profiles['deepseek-web:default']?.bearer) {
     deepseekProvider.setBearerToken(profiles['deepseek-web:default'].bearer);
   }
@@ -168,13 +208,6 @@ beforeAll(async () => {
   registry.register(new PerplexityProvider(authStore, browserFetch));
   registry.register(new DoubaoProvider(authStore, browserFetch, getPage));
   registry.register(new XiaomimoProvider(authStore, browserFetch));
-
-  // Start server
-  const app = createApp({ registry, authStore, authToken: null });
-  const server = serve({ fetch: app.fetch, port: 0 });
-  const addr = server.address() as AddressInfo;
-  serverUrl = `http://127.0.0.1:${addr.port}`;
-  serverClose = () => server.close();
 
   console.log(`\n  E2E server at ${serverUrl}`);
   console.log(`  Authenticated providers: ${[...authenticatedProviders].join(', ')}`);
@@ -237,6 +270,7 @@ describe('E2E: Infrastructure', () => {
 
 describe('E2E: DeepSeek', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('deepseek-web')) return;
     const res = await chatCompletion('deepseek-web/deepseek-v4', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);
@@ -251,6 +285,7 @@ describe('E2E: DeepSeek', () => {
   }, CHAT_TIMEOUT);
 
   it('streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('deepseek-web')) return;
     const res = await chatCompletion('deepseek-web/deepseek-v4', 'Say hello briefly', true);
     expect(res.status).toBe(200);
@@ -271,6 +306,7 @@ describe('E2E: DeepSeek', () => {
 
 describe('E2E: Claude', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('claude-web')) return;
     const res = await chatCompletion('claude-web/claude-sonnet-4-6', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);
@@ -287,6 +323,7 @@ describe('E2E: Claude', () => {
 
 describe('E2E: Qwen', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('qwen-web')) return;
     const res = await chatCompletion('qwen-web/qwen-3.5-plus', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);
@@ -303,6 +340,7 @@ describe('E2E: Qwen', () => {
 
 describe('E2E: GLM', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('glm-web')) return;
     const res = await chatCompletion('glm-web/glm-5', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);
@@ -319,6 +357,7 @@ describe('E2E: GLM', () => {
 
 describe('E2E: Doubao', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('doubao-web')) return;
     const res = await chatCompletion('doubao-web/doubao-seed-2.0-pro', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);
@@ -335,6 +374,7 @@ describe('E2E: Doubao', () => {
 
 describe('E2E: Kimi', () => {
   it('non-streaming chat', async () => {
+    if (!browserAvailable) return;
     if (skipIfNotAuth('kimi-web')) return;
     const res = await chatCompletion('kimi-web/kimi-k2.5', 'Reply with exactly: "E2E_OK"', false);
     console.log(`    status: ${res.status}`);

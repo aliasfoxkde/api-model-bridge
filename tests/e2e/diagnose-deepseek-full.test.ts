@@ -7,10 +7,12 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, rmSync, readFileSync } from 'node:fs';
 
+const CDP_URL = 'http://127.0.0.1:9222';
 const TMP_DIR = join(tmpdir(), `wmb-ds-full-${Date.now()}`);
 const AUTH_PATH = join(process.env.HOME ?? '~', 'Documents/zero0330/openclaw-zero-token/.openclaw-upstream-state/agents/main/agent/auth-profiles.json');
 
 let bm: BrowserManager;
+let browserAvailable = false;
 let authStore: AuthStore;
 let profile: any;
 
@@ -24,13 +26,20 @@ function parseCookies(cookieStr: string, domain: string) {
 
 beforeAll(async () => {
   mkdirSync(TMP_DIR, { recursive: true });
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch {
+    browserAvailable = false;
+  }
+  if (!browserAvailable) return;
   const data = JSON.parse(readFileSync(AUTH_PATH, 'utf-8'));
   profile = JSON.parse(data.profiles['deepseek-web:default'].token);
 
   bm = new BrowserManager({
     profileDir: join(TMP_DIR, 'p'),
     startupTimeout: 30_000, idleShutdown: 0, loginTimeout: 300,
-    cdpUrl: 'http://127.0.0.1:9222', mode: 'attach',
+    cdpUrl: CDP_URL, mode: 'attach',
   });
   authStore = new AuthStore(TMP_DIR);
   authStore.setStatus('deepseek-web', 'active');
@@ -48,6 +57,7 @@ afterAll(async () => {
 
 describe('DeepSeek full flow', () => {
   it('direct provider chat with all events logged', async () => {
+    if (!browserAvailable) return;
     const getPage = (origin: string) => bm.getPageForOrigin(origin);
     const browserFetch = (url: string, init: RequestInit) => bm.fetchInBrowser(url, init);
     const provider = new DeepSeekProvider(authStore, browserFetch, getPage);

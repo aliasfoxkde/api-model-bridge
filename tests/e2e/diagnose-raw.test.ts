@@ -11,9 +11,17 @@ const CDP_URL = 'http://127.0.0.1:9222';
 const TMP_DIR = join(tmpdir(), `wmb-diag-${Date.now()}`);
 
 let bm: BrowserManager;
+let browserAvailable = false;
 
 beforeAll(async () => {
   mkdirSync(TMP_DIR, { recursive: true });
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    browserAvailable = res.ok;
+  } catch {
+    browserAvailable = false;
+  }
+  if (!browserAvailable) return;
   bm = new BrowserManager({
     profileDir: join(TMP_DIR, 'p'),
     startupTimeout: 30_000,
@@ -31,6 +39,7 @@ afterAll(async () => {
 
 describe('Diagnose: cookies', () => {
   it('list all cookies for known domains', async () => {
+    if (!browserAvailable) return;
     const ctx = await bm.ensureBrowser();
     const cookies = await ctx.cookies();
 
@@ -54,6 +63,7 @@ describe('Diagnose: cookies', () => {
 
 describe('Diagnose: raw fetch responses', () => {
   it('DeepSeek /api/v0/chat_session/create', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://chat.deepseek.com');
     const result = await page.evaluate(async () => {
       try {
@@ -72,6 +82,7 @@ describe('Diagnose: raw fetch responses', () => {
   }, 30_000);
 
   it('Claude /api/organizations', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://claude.ai');
     const result = await page.evaluate(async () => {
       try {
@@ -91,6 +102,7 @@ describe('Diagnose: raw fetch responses', () => {
   }, 30_000);
 
   it('Qwen /api/chat/completions (check if exists)', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://chat.qwen.ai');
     // First check what the page URL is
     console.log('  Qwen page URL:', page.url());
@@ -112,6 +124,7 @@ describe('Diagnose: raw fetch responses', () => {
   }, 30_000);
 
   it('Doubao /api/chat/completions (check if exists)', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://www.doubao.com');
     console.log('  Doubao page URL:', page.url());
 
@@ -132,6 +145,7 @@ describe('Diagnose: raw fetch responses', () => {
   }, 30_000);
 
   it('ChatGPT /backend-api/conversation (check auth)', async () => {
+    if (!browserAvailable) return;
     const page = await bm.getPageForOrigin('https://chatgpt.com');
     console.log('  ChatGPT page URL:', page.url());
 

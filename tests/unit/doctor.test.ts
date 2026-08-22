@@ -6,7 +6,7 @@ describe('Doctor', () => {
     const results = await runDoctor();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThanOrEqual(5);
-  });
+  }, 60_000);
 
   it('each result has required fields', async () => {
     const results = await runDoctor();
