@@ -62,7 +62,9 @@ export function openaiRoutes(registry: ProviderRegistry): Hono {
         try {
           for await (const event of provider.chat({ model, messages, stream: true })) {
             const chunk = formatStreamChunk(runId, body.model, event, isFirst);
-            await s.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            if (chunk) {
+              await s.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            }
             isFirst = false;
           }
           await s.write(`data: ${formatDoneChunk()}\n\n`);
@@ -72,7 +74,9 @@ export function openaiRoutes(registry: ProviderRegistry): Hono {
             message: (err as Error).message,
           };
           const chunk = formatStreamChunk(runId, body.model, errEvent, false);
-          await s.write(`data: ${JSON.stringify(chunk)}\n\n`);
+          if (chunk) {
+            await s.write(`data: ${JSON.stringify(chunk)}\n\n`);
+          }
           await s.write(`data: ${formatDoneChunk()}\n\n`);
         }
       });
@@ -88,7 +92,7 @@ export function openaiRoutes(registry: ProviderRegistry): Hono {
         lastError = event.message;
       }
     }
-    if (fullContent.length === 0 && lastError) {
+    if (lastError) {
       return c.json({
         error: { message: lastError, type: 'provider_error', code: 'provider_error' },
       }, 502 as any);

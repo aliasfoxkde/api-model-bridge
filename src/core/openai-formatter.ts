@@ -18,7 +18,7 @@ export function formatStreamChunk(
   modelId: string,
   event: StreamEvent,
   isFirst: boolean,
-): ChatCompletionChunk {
+): ChatCompletionChunk | null {
   const base: ChatCompletionChunk = {
     id: runId,
     object: 'chat.completion.chunk',
@@ -26,6 +26,14 @@ export function formatStreamChunk(
     model: modelId,
     choices: [{ index: 0, delta: {}, finish_reason: null }],
   };
+
+  if (event.type === 'error') {
+    // Emit an error content delta
+    base.choices[0].delta = isFirst
+      ? { role: 'assistant', content: `[ERROR: ${event.message}]` }
+      : { content: `[ERROR: ${event.message}]` };
+    return base;
+  }
 
   if (event.type === 'text_delta') {
     base.choices[0].delta = isFirst
@@ -39,6 +47,15 @@ export function formatStreamChunk(
     base.choices[0].delta = isFirst
       ? { role: 'assistant', content: event.delta }
       : { content: event.delta };
+  } else if (event.type === 'tool_call') {
+    base.choices[0].delta = {
+      tool_calls: [{
+        index: 0,
+        id: event.id,
+        type: 'function',
+        function: { name: event.name, arguments: event.args },
+      }],
+    };
   }
 
   return base;

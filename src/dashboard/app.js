@@ -55,13 +55,16 @@ async function loadProviders() {
     data.providers.forEach(function (p) {
       var row = document.createElement('div');
       row.className = 'provider-row';
+      row.setAttribute('role', 'listitem');
 
       var left = document.createElement('div');
       left.className = 'provider-left';
+      left.setAttribute('role', 'presentation');
 
       var dot = document.createElement('div');
       dot.className =
         'status-indicator ' + (p.authenticated ? 'active' : 'inactive');
+      dot.setAttribute('aria-hidden', 'true');
       left.appendChild(dot);
 
       var nameEl = document.createElement('span');
@@ -78,6 +81,7 @@ async function loadProviders() {
 
       var right = document.createElement('div');
       right.className = 'provider-right';
+      right.setAttribute('role', 'presentation');
 
       if (p.authenticated) {
         var badge = document.createElement('span');
@@ -88,6 +92,7 @@ async function loadProviders() {
         var btn = document.createElement('button');
         btn.className = 'btn-login';
         btn.textContent = 'Login';
+        btn.setAttribute('aria-label', 'Login to ' + p.name);
         btn.addEventListener('click', function () {
           loginProvider(p.id);
         });

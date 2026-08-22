@@ -7,73 +7,73 @@
   <link rel="stylesheet" href="/dashboard/style.css">
 </head>
 <body>
-  <nav class="topbar">
+  <nav class="topbar" role="banner">
     <div class="topbar-brand">
-      <span class="logo">🌉</span>
+      <span class="logo" aria-hidden="true">🌉</span>
       <span class="brand-name">web-model-bridge</span>
     </div>
-    <div class="topbar-status" id="server-status">
-      <span class="pulse green"></span>
+    <div class="topbar-status" id="server-status" role="status" aria-live="polite">
+      <span class="pulse green" aria-hidden="true"></span>
       <span>Running</span>
     </div>
   </nav>
 
-  <main class="container">
+  <main class="container" id="main-content" role="main">
     <!-- API Endpoints Card -->
-    <section class="card">
+    <section class="card" aria-labelledby="endpoints-heading">
       <div class="card-header">
-        <h2>API Endpoints</h2>
-        <span class="badge">Ready</span>
+        <h2 id="endpoints-heading">API Endpoints</h2>
+        <span class="badge" role="status" aria-label="Status: Ready">Ready</span>
       </div>
       <div class="card-body">
         <div class="endpoint-group">
-          <label>OpenAI Format <span class="hint">(OpenClaw, Cursor, Open WebUI)</span></label>
+          <span class="endpoint-label">OpenAI Format <span class="hint">(OpenClaw, Cursor, Open WebUI)</span></span>
           <div class="url-box">
-            <code id="openai-url"></code>
-            <button class="btn-copy" data-target="openai-url">Copy</button>
+            <code id="openai-url" role="textbox" aria-label="OpenAI endpoint URL" tabindex="0"></code>
+            <button class="btn-copy" data-target="openai-url" aria-label="Copy OpenAI endpoint URL">Copy</button>
           </div>
         </div>
         <div class="endpoint-group">
-          <label>Anthropic Format <span class="hint">(Claude Code)</span></label>
+          <span class="endpoint-label">Anthropic Format <span class="hint">(Claude Code)</span></span>
           <div class="url-box">
-            <code id="anthropic-url"></code>
-            <button class="btn-copy" data-target="anthropic-url">Copy</button>
+            <code id="anthropic-url" role="textbox" aria-label="Anthropic endpoint URL" tabindex="0"></code>
+            <button class="btn-copy" data-target="anthropic-url" aria-label="Copy Anthropic endpoint URL">Copy</button>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Providers Card -->
-    <section class="card">
+    <section class="card" aria-labelledby="providers-heading">
       <div class="card-header">
-        <h2>Providers</h2>
-        <span class="count" id="provider-count">0 / 0</span>
+        <h2 id="providers-heading">Providers</h2>
+        <span class="count" id="provider-count" role="status" aria-live="polite" aria-atomic="true">0 / 0</span>
       </div>
-      <div class="card-body" id="provider-list">
-        <div class="loading">Loading providers...</div>
+      <div class="card-body" id="provider-list" role="list" aria-live="polite" aria-label="Provider list">
+        <div class="loading" role="status">Loading providers...</div>
       </div>
     </section>
 
     <!-- System Health Card -->
-    <section class="card">
+    <section class="card" aria-labelledby="system-heading">
       <div class="card-header">
-        <h2>System</h2>
+        <h2 id="system-heading">System</h2>
       </div>
       <div class="card-body">
-        <div class="stats-grid" id="health-info">
-          <div class="loading">Loading...</div>
+        <div class="stats-grid" id="health-info" role="status" aria-live="polite" aria-label="System health information">
+          <div class="loading" role="status">Loading...</div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
-    <a href="https://github.com/linuxhsj/openclaw-zero-token/issues/176" target="_blank">GitHub Issue #176</a>
+  <footer class="footer" role="contentinfo">
+    <a href="https://github.com/linuxhsj/openclaw-zero-token/issues/176" target="_blank" rel="noopener noreferrer" aria-label="Report an issue on GitHub">GitHub Issue #176</a>
     <span class="sep">·</span>
     <span>web-model-bridge v0.1.0</span>
   </footer>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="assertive" aria-atomic="true"></div>
 
   <script src="/dashboard/app.js"></script>
 </body>
