@@ -41,7 +41,7 @@ export interface ChatRequest {
 export abstract class BaseProvider {
   abstract readonly info: ProviderInfo;
 
-  abstract login(context: { openUrl: (url: string) => Promise<void> }): Promise<void>;
+  abstract login(_context: { openUrl: (url: string) => Promise<void> }): Promise<void>;
   abstract isAuthenticated(): Promise<boolean>;
   abstract detectLoginComplete(): Promise<boolean>;
   abstract models(): Promise<ModelInfo[]>;
@@ -52,12 +52,13 @@ export abstract class BaseProvider {
  * Extract plain text from message content, handling both string and
  * OpenAI content-block array formats.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function extractText(content: string | unknown): string {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
     return content
       .filter((b: any) => b.type === 'text')
-      .map((b: any) => b.text)
+      .map((b: any) => b.text as string)
       .join('');
   }
   return String(content ?? '');

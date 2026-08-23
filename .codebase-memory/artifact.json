@@ -1,0 +1,11 @@
+{
+    "schema_version": 1,
+    "commit": "d87c7a209c681bc9eab3cbde50130645e08ecc3b",
+    "indexed_at": "2026-08-23T02:01:02Z",
+    "project": "nas-Temp-repos-api-model-bridge",
+    "nodes": 1010,
+    "edges": 1708,
+    "original_size": 4128768,
+    "compressed_size": 558353,
+    "compression_level": 3
+}

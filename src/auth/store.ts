@@ -27,7 +27,7 @@ export class AuthStore {
 
   getStatus(providerId: string): ProviderAuthStatus {
     const entry = this.data[providerId];
-    if (!entry) {
+    if (!Object.prototype.hasOwnProperty.call(this.data, providerId)) {
       return { providerId, status: 'none', lastCheck: null };
     }
     return { providerId, status: entry.status, lastCheck: entry.lastCheck };
@@ -46,6 +46,7 @@ export class AuthStore {
   }
 
   clearStatus(providerId: string): void {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete this.data[providerId];
     this.save();
   }

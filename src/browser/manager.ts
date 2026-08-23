@@ -63,9 +63,9 @@ export class BrowserManager {
         if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('connect')) {
           throw new Error(
             `Cannot connect to Chrome at ${cdpUrl}.\n\n` +
-            `To use web-model-bridge, Chrome needs to run with remote debugging enabled:\n\n` +
-            this.getChromeStartCommand() +
-            `\n\nOr switch to launch mode: web-model-bridge --browser-mode launch`
+            'To use web-model-bridge, Chrome needs to run with remote debugging enabled:\n\n' +
+            `${this.getChromeStartCommand()}\n\n` +
+            'Or switch to launch mode: web-model-bridge --browser-mode launch'
           );
         }
         throw err;
@@ -104,7 +104,7 @@ export class BrowserManager {
     const ctx = await this.ensureBrowser();
 
     let page = this.domainPages.get(origin);
-    if (page && page.isClosed()) {
+    if (page?.isClosed()) {
       this.domainPages.delete(origin);
       page = undefined;
     }
@@ -115,7 +115,7 @@ export class BrowserManager {
         await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15000 });
       } catch {
         try {
-          await page.goto(origin + '/', { waitUntil: 'commit', timeout: 10000 });
+          await page.goto(`${origin}/`, { waitUntil: 'commit', timeout: 10000 });
         } catch {
           // Page is now on the right domain even if load didn't fully complete
         }
@@ -131,7 +131,8 @@ export class BrowserManager {
    */
   async evaluateOnDomain<T>(origin: string, fn: string, args?: unknown): Promise<T> {
     const page = await this.getPageForOrigin(origin);
-    return page.evaluate(fn as any, args as any) as Promise<T>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    return page.evaluate(fn, args) as Promise<T>;
   }
 
   /**
@@ -145,7 +146,7 @@ export class BrowserManager {
     const result = await page.evaluate(
       async ([fetchUrl, fetchInit]: [string, { method?: string; headers?: Record<string, string>; body?: string }]) => {
         const res = await fetch(fetchUrl, {
-          method: fetchInit.method || 'GET',
+          method: fetchInit.method ?? 'GET',
           headers: fetchInit.headers,
           body: fetchInit.body,
           credentials: 'include',
@@ -237,7 +238,7 @@ export class BrowserManager {
 
     // Launch mode — same as before: open headed Chrome
     if (this._loginState.status === 'opening' || this._loginState.status === 'waiting_for_user') {
-      throw new Error(`Login already in progress for ${this._loginState.providerId}.`);
+      throw new Error(`Login already in progress for ${this._loginState.providerId ?? 'unknown'}.`);
     }
 
     this._loginState = { providerId, status: 'opening', message: 'Launching Chrome...', startedAt: Date.now() };
@@ -298,7 +299,7 @@ export class BrowserManager {
         }, 10000);
       };
 
-      waitForCompletion().catch((err) => {
+      waitForCompletion().catch((err: unknown) => {
         this._loginState = { providerId, status: 'failed', message: `Login failed: ${(err as Error).message}`, startedAt: null };
         onComplete(false);
       });
@@ -412,7 +413,7 @@ export class BrowserManager {
     if (this.opts.idleShutdown > 0) {
       this.idleTimer = setTimeout(() => {
         this._status = 'idle';
-        this.shutdown();
+        void this.shutdown();
       }, this.opts.idleShutdown * 1000);
     }
   }

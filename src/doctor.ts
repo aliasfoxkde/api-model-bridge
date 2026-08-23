@@ -76,7 +76,7 @@ export async function runDoctor(): Promise<CheckResult[]> {
   results.push({ name: 'Default Port', status: 'ok', message: '3456 (will auto-find if busy)' });
 
   // 6. Data directory
-  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? '';
   const stateDir = `${homeDir}/.webmodel`;
   results.push({
     name: 'Data Directory',

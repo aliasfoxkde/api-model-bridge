@@ -9,8 +9,10 @@ export interface RouterConfig {
 }
 
 export class Router {
+  // eslint-disable-next-line no-unused-vars
   constructor(
     private registry: ProviderRegistry,
+    // eslint-disable-next-line no-unused-vars
     private config: RouterConfig = {},
   ) {}
 

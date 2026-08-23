@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/restrict-template-expressions */
 import { program } from 'commander';
 import chalk from 'chalk';
 import open from 'open';
@@ -48,7 +49,7 @@ const DEFAULT_STATE_DIR = join(homedir(), '.webmodel');
 function isPortAvailable(port: number, host: string): Promise<boolean> {
   return new Promise((resolve) => {
     const srv = createServer();
-    srv.once('error', () => resolve(false));
+    srv.once('error', () => { resolve(false); });
     srv.once('listening', () => { srv.close(); resolve(true); });
     srv.listen(port, host);
   });
@@ -59,7 +60,7 @@ async function findAvailablePort(preferred: number, host: string): Promise<numbe
   for (let port = preferred; port < preferred + 100; port++) {
     if (await isPortAvailable(port, host)) return port;
   }
-  throw new Error(`No available port found in range ${preferred}-${preferred + 99}`);
+  throw new Error(`No available port found in range ${preferred}-${String(preferred + 99)}`);
 }
 
 /** Check if Chrome is running (any instance) */
@@ -113,7 +114,7 @@ async function launchChromeWithCDP(cdpPort: number, profileDir: string): Promise
     // Wait for CDP to become available (up to 10 seconds)
     for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 500));
-      if (await checkCDP(`http://127.0.0.1:${cdpPort}`)) return true;
+      if (await checkCDP(`http://127.0.0.1:${String(cdpPort)}`)) return true;
     }
     return false;
   } catch {
@@ -129,7 +130,7 @@ function getChromeCommand(port: number): string {
   } else if (os === 'win32') {
     return `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${port}`;
   }
-  return `google-chrome --remote-debugging-port=${port}`;
+  return `google-chrome --remote-debugging-port=${String(port)}`;
 }
 
 // ─── Main ───
@@ -181,11 +182,11 @@ program
     if (!(await isPortAvailable(serverPort, serverHost))) {
       const oldPort = serverPort;
       serverPort = await findAvailablePort(serverPort + 1, serverHost);
-      console.log(chalk.yellow(`  ⚠ Port ${oldPort} in use, using ${serverPort} instead`));
+      console.log(chalk.yellow(`  ⚠ Port ${String(oldPort)} in use, using ${String(serverPort)} instead`));
     }
 
     // ── Step 3: Browser setup ──
-    const browserMode = (opts.browserMode === 'launch' ? 'launch' : 'attach') as 'attach' | 'launch';
+    const browserMode = opts.browserMode === 'launch' ? 'launch' : 'attach';
     const cdpPort = parseInt(new URL(opts.cdpUrl).port, 10) || 9222;
     const cdpUrl = opts.cdpUrl;
     // Chrome profile: custom > config > default
@@ -195,7 +196,7 @@ program
       const cdpAvailable = await checkCDP(cdpUrl);
 
       if (cdpAvailable) {
-        console.log(chalk.green('  ✓') + ` Chrome CDP connected at ${cdpUrl}`);
+        console.log(`${chalk.green('  ✓')} Chrome CDP connected at ${cdpUrl}`);
       } else {
         // CDP not available — figure out why and try to fix
         const chromeRunning = isChromeRunning();
@@ -207,7 +208,7 @@ program
 
           const launched = await launchChromeWithCDP(cdpPort, chromeProfileDir);
           if (launched) {
-            console.log(chalk.green('  ✓') + ` Dedicated Chrome launched with CDP at port ${cdpPort}`);
+            console.log(`${chalk.green('  ✓')} Dedicated Chrome launched with CDP at port ${String(cdpPort)}`);
             console.log(chalk.gray(`    Profile: ${chromeProfileDir}`));
             console.log(chalk.gray('    First time? Login via Dashboard after server starts.'));
           } else {
@@ -222,7 +223,7 @@ program
 
           const launched = await launchChromeWithCDP(cdpPort, chromeProfileDir);
           if (launched) {
-            console.log(chalk.green('  ✓') + ` Chrome launched with CDP at port ${cdpPort}`);
+            console.log(`${chalk.green('  ✓')} Chrome launched with CDP at port ${String(cdpPort)}`);
             console.log(chalk.gray(`    Profile: ${chromeProfileDir}`));
           } else {
             console.log(chalk.yellow('  ⚠ Could not auto-launch Chrome with debug port.'));
@@ -233,7 +234,7 @@ program
         }
       }
     } else {
-      console.log(chalk.green('  ✓') + ' Browser mode: launch (independent Chrome)');
+      console.log(`${chalk.green('  ✓')} Browser mode: launch (independent Chrome)`);
     }
 
     const browserManager = new BrowserManager({
@@ -283,7 +284,7 @@ program
           }
         }
         if (autoAuthCount > 0) {
-          console.log(chalk.green('  ✓') + ` Auto-detected ${autoAuthCount} authenticated providers from browser cookies`);
+          console.log(`${chalk.green('  ✓')} Auto-detected ${autoAuthCount} authenticated providers from browser cookies`);
         }
       } catch {
         // Auto-detect failed, not critical
@@ -327,18 +328,18 @@ program
 
     const url = `http://${serverHost === '0.0.0.0' ? 'localhost' : serverHost}:${serverPort}`;
 
-    console.log(chalk.green('  ✓') + ` Server running at ${chalk.cyan(url)}`);
-    console.log(chalk.green('  ✓') + ` API Base: ${chalk.cyan(url + '/v1')}`);
+    console.log(`${chalk.green('  ✓')} Server running at ${chalk.cyan(url)}`);
+    console.log(`${chalk.green('  ✓')} API Base: ${chalk.cyan(`${url}/v1`)}`);
 
     const providerStatuses = await registry.providerStatus();
     const authCount = providerStatuses.filter(p => p.authenticated).length;
-    console.log(chalk.green('  ✓') + ` ${providerStatuses.length} providers, ${authCount} authenticated`);
+    console.log(`${chalk.green('  ✓')} ${providerStatuses.length} providers, ${authCount} authenticated`);
 
     if (opts.open !== false && config.server.openDashboard) {
-      console.log(chalk.green('  ✓') + ` Dashboard: ${chalk.cyan(url)} (opening in browser)`);
+      console.log(`${chalk.green('  ✓')} Dashboard: ${chalk.cyan(url)} (opening in browser)`);
       await open(url);
     } else {
-      console.log(chalk.green('  ✓') + ` Dashboard: ${chalk.cyan(url)}`);
+      console.log(`${chalk.green('  ✓')} Dashboard: ${chalk.cyan(url)}`);
     }
 
     if (authCount === 0 && browserMode === 'attach') {

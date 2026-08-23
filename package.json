@@ -17,7 +17,8 @@
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit && vitest run"
+    "lint": "eslint src tests --max-warnings 0",
+    "lint:fix": "eslint src tests --fix"
   },
   "engines": {
     "node": ">=20"
@@ -44,11 +45,16 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.2",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^8.57.1",
+    "eslint-config-standard-with-typescript": "^43.0.1",
     "msw": "^2.12.14",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.2"
   }
 }
