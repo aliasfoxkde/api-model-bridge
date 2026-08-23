@@ -103,4 +103,42 @@ server:
       delete process.env.WMB_AUTH_TOKEN;
     }
   });
+
+  it('reads WMB_STATE_DIR env var', () => {
+    process.env.WMB_STATE_DIR = '/custom/state';
+    try {
+      const config = loadConfig({ stateDir: testDir });
+      expect(config.browser.profileDir).toBe('/custom/state/chrome-profile');
+      expect(config.logging.file).toBe('/custom/state/logs/bridge.log');
+    } finally {
+      delete process.env.WMB_STATE_DIR;
+    }
+  });
+
+  it('reads WMB_HOST and WMB_LOG_LEVEL env vars', () => {
+    process.env.WMB_HOST = '0.0.0.0';
+    process.env.WMB_LOG_LEVEL = 'debug';
+    try {
+      const config = loadConfig({ stateDir: testDir });
+      expect(config.server.host).toBe('0.0.0.0');
+      expect(config.logging.level).toBe('debug');
+    } finally {
+      delete process.env.WMB_HOST;
+      delete process.env.WMB_LOG_LEVEL;
+    }
+  });
+
+  it('re-resolves profileDir when YAML sets placeholder default value', () => {
+    const configPath = join(testDir, 'config.yml');
+    // Set profileDir to the default placeholder path - should be replaced with real stateDir
+    writeFileSync(configPath, `
+browser:
+  profileDir: __placeholder__/chrome-profile
+logging:
+  file: __placeholder__/logs/bridge.log
+`);
+    const config = loadConfig({ stateDir: testDir });
+    expect(config.browser.profileDir).toBe(join(testDir, 'chrome-profile'));
+    expect(config.logging.file).toBe(join(testDir, 'logs', 'bridge.log'));
+  });
 });
