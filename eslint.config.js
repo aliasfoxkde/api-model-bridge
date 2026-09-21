@@ -7,6 +7,10 @@ export default tseslint.config(
     files: ['src/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
+      parserOptions: {
+        project: './tsconfig.eslint.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
@@ -22,6 +26,7 @@ export default tseslint.config(
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       'no-console': 'warn',
       'no-empty': 'warn',
+      'no-unused-vars': 'off',
       'no-var': 'error',
       'prefer-const': 'error',
       'prefer-template': 'error',
