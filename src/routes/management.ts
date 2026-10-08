@@ -88,8 +88,28 @@ export function managementRoutes(deps: ManagementDeps): Hono {
   app.get('/webmodel/health', async (c) => {
     const statuses = await registry.providerStatus();
     const browserStatus = deps.getBrowserStatus ? deps.getBrowserStatus() : 'stopped';
+
+    // Readiness: at least one authenticated provider that actually reports
+    // models. Liveness (`status`) is unchanged for compatibility.
+    const readyProviders = statuses.filter(s => s.authenticated && s.modelCount > 0);
+    const availableModels = readyProviders.reduce((sum, s) => sum + s.modelCount, 0);
+    const ready = readyProviders.length > 0;
+    const readiness = {
+      ready,
+      readyProviders: readyProviders.length,
+      totalProviders: statuses.length,
+      availableModels,
+      reason: ready
+        ? null
+        : statuses.length === 0
+          ? 'no providers registered'
+          : 'no authenticated provider reports models',
+    };
+
     return c.json({
       status: 'healthy',
+      ready,
+      readiness,
       uptime: Math.floor((Date.now() - routeStartTime) / 1000),
       browser: { status: browserStatus },
       providers: Object.fromEntries(

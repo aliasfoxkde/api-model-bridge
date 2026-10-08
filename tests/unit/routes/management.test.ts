@@ -1,8 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { createTestContext, type TestContext } from '../../helpers/test-server.js';
 import { MockProvider } from '../../helpers/mock-provider.js';
-import type { LoginState } from '../../../src/browser/manager.js';
-import type { MetricsCollector } from '../../../src/core/metrics.js';
 
 describe('Management endpoints', () => {
   let ctx: TestContext;
@@ -20,8 +18,8 @@ describe('Management endpoints', () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.providers).toHaveLength(2);
-      expect(body.providers.find((p: any) => p.id === 'claude-web').authenticated).toBe(true);
-      expect(body.providers.find((p: any) => p.id === 'deepseek-web').authenticated).toBe(false);
+      expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'claude-web').authenticated).toBe(true);
+      expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'deepseek-web').authenticated).toBe(false);
     });
   });
 
@@ -32,8 +30,62 @@ describe('Management endpoints', () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.status).toBe('healthy');
+      expect(body).toHaveProperty('ready');
+      expect(body).toHaveProperty('readiness');
       expect(body).toHaveProperty('uptime');
       expect(body).toHaveProperty('providers');
+    });
+
+    it('reports not ready with no providers registered', async () => {
+      ctx = createTestContext({ providers: [] });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy'); // liveness preserved
+      expect(body.ready).toBe(false);
+      expect(body.readiness.ready).toBe(false);
+      expect(body.readiness.readyProviders).toBe(0);
+      expect(body.readiness.totalProviders).toBe(0);
+      expect(body.readiness.availableModels).toBe(0);
+      expect(body.readiness.reason).toBe('no providers registered');
+    });
+
+    it('reports not ready when providers are unauthenticated', async () => {
+      ctx = createTestContext({
+        providers: [new MockProvider('deepseek-web', { authenticated: false })],
+      });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy');
+      expect(body.ready).toBe(false);
+      expect(body.readiness.ready).toBe(false);
+      expect(body.readiness.readyProviders).toBe(0);
+      expect(body.readiness.totalProviders).toBe(1);
+      expect(body.readiness.availableModels).toBe(0);
+      expect(body.readiness.reason).toBe('no authenticated provider reports models');
+    });
+
+    it('reports ready when an authenticated provider reports models', async () => {
+      ctx = createTestContext({
+        providers: [
+          new MockProvider('claude-web', {
+            authenticated: true,
+            models: [{ id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', contextWindow: 200000, maxOutput: 8192 }],
+          }),
+          new MockProvider('deepseek-web', { authenticated: false }),
+        ],
+      });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy'); // liveness preserved alongside readiness
+      expect(body.ready).toBe(true);
+      expect(body.readiness.ready).toBe(true);
+      expect(body.readiness.readyProviders).toBe(1);
+      expect(body.readiness.totalProviders).toBe(2);
+      expect(body.readiness.availableModels).toBe(1);
+      expect(body.readiness.reason).toBeNull();
     });
   });
 

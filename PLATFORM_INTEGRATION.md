@@ -31,6 +31,8 @@ curl --fail http://127.0.0.1:3456/webmodel/health
 
 The default bind is `127.0.0.1:3456`. `--host`, `--port`, `--auth-token`, and `--no-open` are supported; configuration may also be supplied through `~/.webmodel/config.yml` and `WMB_HOST`/`WMB_AUTH_TOKEN`. Remote exposure requires an explicit authenticated configuration and network boundary review.
 
+`GET /webmodel/health` always returns 200 with `status: healthy` as a liveness signal only. Readiness is a separate additive field: `ready` is `true` only when at least one authenticated provider actually reports models (`readiness.readyProviders` > 0, `readiness.availableModels` > 0); otherwise `readiness.reason` explains the gap. Routing consumers must gate on `ready`, not on `status` or the 200 alone. Readiness reflects reported provider/model state only and is not a substitute for per-model qualification.
+
 ## API surface
 
 ### Inbound APIs
@@ -41,7 +43,7 @@ The default bind is `127.0.0.1:3456`. `--host`, `--port`, `--auth-token`, and `-
 | `/v1/chat/completions` | POST | OpenAI-compatible chat requests |
 | `/v1/messages` | POST | Anthropic-compatible messages requests |
 | `/v1/models` | GET | Advertised model inventory |
-| `/webmodel/health` | GET | Bridge/provider health status |
+| `/webmodel/health` | GET | Bridge liveness (`status`) plus readiness (`ready`/`readiness`) |
 | `/webmodel/providers` | GET | Provider authentication status |
 | `/webmodel/auth/login` | POST | Start provider login flow |
 | `/webmodel/auth/logout` | POST | Clear provider session |
