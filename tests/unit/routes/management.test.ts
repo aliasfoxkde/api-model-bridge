@@ -1,8 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { createTestContext, type TestContext } from '../../helpers/test-server.js';
 import { MockProvider } from '../../helpers/mock-provider.js';
-import type { LoginState } from '../../../src/browser/manager.js';
-import type { MetricsCollector } from '../../../src/core/metrics.js';
 
 describe('Management endpoints', () => {
   let ctx: TestContext;
@@ -20,8 +18,8 @@ describe('Management endpoints', () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.providers).toHaveLength(2);
-      expect(body.providers.find((p: any) => p.id === 'claude-web').authenticated).toBe(true);
-      expect(body.providers.find((p: any) => p.id === 'deepseek-web').authenticated).toBe(false);
+      expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'claude-web').authenticated).toBe(true);
+      expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'deepseek-web').authenticated).toBe(false);
     });
   });
 
