@@ -6,11 +6,13 @@ import { ProviderRegistry } from './core/registry.js';
 import { AuthStore } from './auth/store.js';
 import type { BrowserStatus, LoginState } from './browser/manager.js';
 import { InvalidTokenError, errorToHttpResponse } from './core/errors.js';
+import { readDashboardAsset } from './core/dashboard-assets.js';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const dashboardDir = join(__dirname, 'dashboard');
 
 export interface AppOptions {
   registry: ProviderRegistry;
@@ -43,7 +45,7 @@ export function createApp(opts: AppOptions): Hono {
   // Dashboard
   app.get('/', (c) => {
     try {
-      const html = readFileSync(join(__dirname, 'dashboard', 'index.html'), 'utf-8');
+      const html = readFileSync(join(dashboardDir, 'index.html'), 'utf-8');
       return c.html(html);
     } catch {
       return c.text('Dashboard available after build. Run: npx tsup', 404);
@@ -51,17 +53,11 @@ export function createApp(opts: AppOptions): Hono {
   });
 
   app.get('/dashboard/:file', (c) => {
-    const file = c.req.param('file');
-    const ext = file.split('.').pop();
-    const contentType = ext === 'js' ? 'application/javascript'
-      : ext === 'css' ? 'text/css'
-      : 'text/plain';
-    try {
-      const content = readFileSync(join(__dirname, 'dashboard', file), 'utf-8');
-      return c.text(content, 200, { 'Content-Type': contentType });
-    } catch {
+    const asset = readDashboardAsset(dashboardDir, c.req.param('file'));
+    if (!asset) {
       return c.text('Not found', 404);
     }
+    return c.text(asset.content, 200, { 'Content-Type': asset.contentType });
   });
 
   // Mount API routes
