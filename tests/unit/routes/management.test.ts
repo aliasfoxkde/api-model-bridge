@@ -21,6 +21,17 @@ describe('Management endpoints', () => {
       expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'claude-web').authenticated).toBe(true);
       expect(body.providers.find((p: { id: string; authenticated: boolean }) => p.id === 'deepseek-web').authenticated).toBe(false);
     });
+
+    it('exposes loginUrl so an unauthenticated provider is actionable', async () => {
+      ctx = createTestContext({
+        providers: [new MockProvider('deepseek-web', { authenticated: false })],
+      });
+      const res = await ctx.app.request('/webmodel/providers');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      const deepseek = body.providers.find((p: { id: string }) => p.id === 'deepseek-web');
+      expect(deepseek.loginUrl).toBe('https://deepseek-web.example.com/login');
+    });
   });
 
   describe('GET /webmodel/health', () => {
@@ -86,6 +97,78 @@ describe('Management endpoints', () => {
       expect(body.readiness.totalProviders).toBe(2);
       expect(body.readiness.availableModels).toBe(1);
       expect(body.readiness.reason).toBeNull();
+    });
+
+    it('never reports ready from an authenticated flag alone (zero models)', async () => {
+      ctx = createTestContext({
+        providers: [new MockProvider('claude-web', { authenticated: true, models: [] })],
+      });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy');
+      expect(body.ready).toBe(false);
+      expect(body.readiness.ready).toBe(false);
+      expect(body.readiness.readyProviders).toBe(0);
+      expect(body.readiness.availableModels).toBe(0);
+      expect(body.readiness.reason).toBe('no authenticated provider reports models');
+    });
+
+    it('contains provider adapter failure while preserving liveness and ready providers', async () => {
+      ctx = createTestContext({
+        providers: [
+          new MockProvider('claude-web', {
+            authenticated: true,
+            models: [{ id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', contextWindow: 200000, maxOutput: 8192 }],
+          }),
+          new MockProvider('broken-web', { statusError: 'adapter crashed' }),
+        ],
+      });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy');
+      expect(body.ready).toBe(true);
+      expect(body.readiness.readyProviders).toBe(1);
+      expect(body.providers['broken-web']).toEqual({
+        authenticated: false,
+        models: 0,
+        error: 'adapter crashed',
+      });
+    });
+
+    it('reports not ready when the only provider adapter fails', async () => {
+      ctx = createTestContext({
+        providers: [new MockProvider('broken-web', { statusError: 'adapter crashed' })],
+      });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('healthy');
+      expect(body.ready).toBe(false);
+      expect(body.readiness.readyProviders).toBe(0);
+      expect(body.readiness.reason).toBe('no authenticated provider reports models');
+      expect(body.providers['broken-web']).toEqual({
+        authenticated: false,
+        models: 0,
+        error: 'adapter crashed',
+      });
+    });
+
+    it('exposes the deployed build version when configured', async () => {
+      ctx = createTestContext({ version: '9.9.9-test' });
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.version).toBe('9.9.9-test');
+    });
+
+    it('reports null version when not configured', async () => {
+      ctx = createTestContext();
+      const res = await ctx.app.request('/webmodel/health');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.version).toBeNull();
     });
   });
 

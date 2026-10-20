@@ -12,6 +12,7 @@ export interface ManagementDeps {
   getBrowserStatus?: () => BrowserStatus;
   startTime?: number;
   metrics?: MetricsCollector;
+  version?: string;
 }
 
 export function managementRoutes(deps: ManagementDeps): Hono {
@@ -110,10 +111,11 @@ export function managementRoutes(deps: ManagementDeps): Hono {
       status: 'healthy',
       ready,
       readiness,
+      version: deps.version ?? null,
       uptime: Math.floor((Date.now() - routeStartTime) / 1000),
       browser: { status: browserStatus },
       providers: Object.fromEntries(
-        statuses.map(s => [s.id, { authenticated: s.authenticated, models: s.modelCount }])
+        statuses.map(s => [s.id, { authenticated: s.authenticated, models: s.modelCount, error: s.error }])
       ),
     });
   });

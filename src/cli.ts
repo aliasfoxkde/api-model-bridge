@@ -21,8 +21,9 @@ import { DoubaoProvider } from './providers/doubao-web/index.js';
 import { XiaomimoProvider } from './providers/xiaomimo-web/index.js';
 import type { BaseProvider } from './core/provider.js';
 import { homedir, platform } from 'node:os';
-import { join } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { mkdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { runDoctor, printDoctorResults, findChromePath } from './doctor.js';
@@ -42,6 +43,17 @@ const PROVIDER_MAP: Record<string, new (auth: AuthStore, fetch?: (url: string, i
 };
 
 const DEFAULT_STATE_DIR = join(homedir(), '.webmodel');
+
+// Version is read at runtime so health can identify the deployed build;
+// a stale deployment is exactly what the 2026-10-19 audit found in production.
+function readPackageVersion(): string | null {
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+    return (JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string }).version ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Helpers ───
 
@@ -138,7 +150,7 @@ function getChromeCommand(port: number): string {
 program
   .name('web-model-bridge')
   .description('Bridge web AI models through OpenAI-compatible API')
-  .version('0.1.0')
+  .version(readPackageVersion() ?? '0.1.0')
   .option('-p, --port <port>', 'listen port', parseInt)
   .option('--host <host>', 'bind address')
   .option('--auth-token <token>', 'require Bearer token for API access')
@@ -296,6 +308,7 @@ program
       registry,
       authStore,
       authToken: config.server.authToken,
+      version: readPackageVersion() ?? undefined,
       getBrowserStatus: () => browserManager.getStatus(),
       onLogin: async (providerId: string) => {
         const provider = registry.getProvider(providerId);

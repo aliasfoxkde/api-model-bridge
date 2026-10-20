@@ -76,4 +76,31 @@ describe('ProviderRegistry', () => {
     expect(statuses.find(s => s.id === 'claude-web')?.authenticated).toBe(true);
     expect(statuses.find(s => s.id === 'deepseek-web')?.authenticated).toBe(false);
   });
+
+  it('providerStatus exposes loginUrl for operator action', async () => {
+    const statuses = await registry.providerStatus();
+    expect(statuses.find(s => s.id === 'claude-web')?.loginUrl).toBe('https://claude-web.example.com/login');
+  });
+
+  it('providerStatus contains isAuthenticated failures without throwing', async () => {
+    registry.register(new MockProvider('broken-web', { statusError: 'auth check exploded' }));
+    const statuses = await registry.providerStatus();
+    const status = statuses.find(s => s.id === 'broken-web');
+    expect(status?.authenticated).toBe(false);
+    expect(status?.modelCount).toBe(0);
+    expect(status?.error).toBe('auth check exploded');
+    expect(statuses.find(s => s.id === 'claude-web')?.authenticated).toBe(true);
+  });
+
+  it('providerStatus contains models() failures from an authenticated provider', async () => {
+    registry.register(new MockProvider('broken-models-web', {
+      authenticated: true,
+      modelsError: 'model listing failed',
+    }));
+    const statuses = await registry.providerStatus();
+    const status = statuses.find(s => s.id === 'broken-models-web');
+    expect(status?.authenticated).toBe(false);
+    expect(status?.modelCount).toBe(0);
+    expect(status?.error).toBe('model listing failed');
+  });
 });

@@ -16,6 +16,7 @@ export interface TestContext {
 
 export function createTestContext(opts?: {
   authToken?: string;
+  version?: string;
   providers?: MockProvider[];
 }): TestContext {
   const stateDir = join(tmpdir(), `wmb-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -35,7 +36,7 @@ export function createTestContext(opts?: {
     registry.register(p);
   }
 
-  const app = createApp({ registry, authStore, authToken: opts?.authToken ?? null });
+  const app = createApp({ registry, authStore, authToken: opts?.authToken ?? null, version: opts?.version });
 
   return {
     app,

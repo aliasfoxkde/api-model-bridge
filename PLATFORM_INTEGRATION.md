@@ -3,6 +3,7 @@
 **Component:** web-model-bridge  
 **Template version:** 1.0  
 **Created:** 2026-08-30  
+**Updated:** 2026-10-20  
 **Status:** Experimental integration candidate; provider/session reliability must be qualified before production routing
 
 ## Role
@@ -32,6 +33,8 @@ curl --fail http://127.0.0.1:3456/webmodel/health
 The default bind is `127.0.0.1:3456`. `--host`, `--port`, `--auth-token`, and `--no-open` are supported; configuration may also be supplied through `~/.webmodel/config.yml` and `WMB_HOST`/`WMB_AUTH_TOKEN`. Remote exposure requires an explicit authenticated configuration and network boundary review.
 
 `GET /webmodel/health` always returns 200 with `status: healthy` as a liveness signal only. Readiness is a separate additive field: `ready` is `true` only when at least one authenticated provider actually reports models (`readiness.readyProviders` > 0, `readiness.availableModels` > 0); otherwise `readiness.reason` explains the gap. Routing consumers must gate on `ready`, not on `status` or the 200 alone. Readiness reflects reported provider/model state only and is not a substitute for per-model qualification.
+
+The health body also carries `version` (the deployed build's package version, `null` when unavailable) so consumers and operators can detect stale deployments. A provider adapter that fails its own status check is reported under its provider entry with an `error` string; such failures never change the 200 liveness response and never count toward readiness. `GET /webmodel/providers` includes each provider's `loginUrl` so an unauthenticated provider maps to a concrete operator action.
 
 ## API surface
 

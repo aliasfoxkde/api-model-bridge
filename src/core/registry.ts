@@ -5,8 +5,10 @@ export interface ProviderStatus {
   id: string;
   name: string;
   website: string;
+  loginUrl: string;
   authenticated: boolean;
   modelCount: number;
+  error?: string;
 }
 
 export class ProviderRegistry {
@@ -60,17 +62,29 @@ export class ProviderRegistry {
     const result: ProviderStatus[] = [];
 
     for (const [, provider] of this.providers) {
-      const authenticated = await provider.isAuthenticated();
+      let authenticated = false;
       let modelCount = 0;
-      if (authenticated) {
-        modelCount = (await provider.models()).length;
+      let error: string | undefined;
+      try {
+        authenticated = await provider.isAuthenticated();
+        if (authenticated) {
+          modelCount = (await provider.models()).length;
+        }
+      } catch (err) {
+        // Adapter failure must not break the always-200 liveness contract,
+        // and an undeterminable provider must never count as ready.
+        authenticated = false;
+        modelCount = 0;
+        error = (err as Error).message;
       }
       result.push({
         id: provider.info.id,
         name: provider.info.name,
         website: provider.info.website,
+        loginUrl: provider.info.loginUrl,
         authenticated,
         modelCount,
+        error,
       });
     }
 

@@ -5,10 +5,17 @@ export class MockProvider extends BaseProvider {
   readonly info: ProviderInfo;
   private _authenticated: boolean;
   private _models: ModelInfo[];
+  private readonly _statusError?: string;
+  private readonly _modelsError?: string;
 
   constructor(
     id: string,
-    opts?: { authenticated?: boolean; models?: ModelInfo[] }
+    opts?: {
+      authenticated?: boolean;
+      models?: ModelInfo[];
+      statusError?: string;
+      modelsError?: string;
+    }
   ) {
     super();
     this.info = {
@@ -22,6 +29,8 @@ export class MockProvider extends BaseProvider {
     this._models = opts?.models ?? [
       { id: 'mock-model-1', name: 'Mock Model 1', contextWindow: 100000, maxOutput: 4096 },
     ];
+    this._statusError = opts?.statusError;
+    this._modelsError = opts?.modelsError;
   }
 
   async login(): Promise<void> {
@@ -29,6 +38,7 @@ export class MockProvider extends BaseProvider {
   }
 
   async isAuthenticated(): Promise<boolean> {
+    if (this._statusError !== undefined) throw new Error(this._statusError);
     return this._authenticated;
   }
 
@@ -37,6 +47,7 @@ export class MockProvider extends BaseProvider {
   }
 
   async models(): Promise<ModelInfo[]> {
+    if (this._modelsError !== undefined) throw new Error(this._modelsError);
     return this._models;
   }
 

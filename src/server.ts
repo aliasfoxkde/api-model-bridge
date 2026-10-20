@@ -18,6 +18,7 @@ export interface AppOptions {
   registry: ProviderRegistry;
   authStore: AuthStore;
   authToken: string | null;
+  version?: string;
   onLogin?: (providerId: string) => Promise<{ status: string; message: string }>;
   getBrowserStatus?: () => BrowserStatus;
   getLoginState?: () => LoginState;
@@ -71,6 +72,7 @@ export function createApp(opts: AppOptions): Hono {
     getLoginState: opts.getLoginState,
     getBrowserStatus: opts.getBrowserStatus,
     startTime: Date.now(),
+    version: opts.version,
   };
   app.route('/', managementRoutes(mgmtDeps));
 
