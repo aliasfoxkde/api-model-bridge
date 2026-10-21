@@ -68,10 +68,11 @@ The cross-project authorities for this handoff are:
 **Rating:** Not scored; no calibrated rubric was applied in this update.
 
 <!-- markdownlint-disable MD013 -->
-Evidence boundary (central audit): branch `codex/handoff-refresh-20261021`, HEAD `700e96abc9eb9c58f3e1a430f464b31a1cdc24c1`, 0 dirty status entries.
+Evidence boundary (central audit): branch `master`, HEAD `700e96abc9eb9c58f3e1a430f464b31a1cdc24c1`, 0 dirty status entries.
 <!-- markdownlint-enable MD013 -->
 
-This is the clean worktree snapshot before the handoff-only edit.
+This records `origin/master` immediately before the handoff-only edit in the
+isolated worktree. The historical status claims above remain time-bounded.
 
 ## Acceptance criteria for production admission
 
