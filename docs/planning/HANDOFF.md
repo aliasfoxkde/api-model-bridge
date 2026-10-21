@@ -33,9 +33,11 @@ The following commands were run from a clean isolated worktree based on
 | `npm run typecheck` | Pass |
 | `npm run test:unit -- --run` | Pass: 20 files, 192 tests |
 | `npm run test:integration -- --run` | Pass: 4 files, 19 tests |
-| `npm run lint` | Executes; fails honestly with 37 existing errors and 216 warnings across provider and diagnostic code |
+| lint | `npm run lint` fails: 37 errors, 216 warnings. |
 | `npm run build` | Pass: tsup produced `dist/cli.js` |
 | provider/browser E2E | Not claimed; requires authenticated browser sessions |
+
+The lint findings are in existing provider and diagnostic code.
 
 The lint configuration fix in this branch adds `tsconfig.eslint.json` and points
 the flat ESLint configuration at it. The repository therefore has a functioning
@@ -55,6 +57,21 @@ removed only after the reported source and test findings are remediated.
    compatibility.
 5. Define a release artifact and publication receipt before calling a package
    release production-ready.
+
+## Provenance and Audit Context
+
+The cross-project authorities for this handoff are:
+
+- `HANDOFF_AUDIT_2026-08-13.md` (Platform-Architecture).
+- `CODEX_CLI_EXECUTION_PACKETS_2026-08-13.md` (Platform-Architecture).
+
+**Rating:** Not scored; no calibrated rubric was applied in this update.
+
+<!-- markdownlint-disable MD013 -->
+Evidence boundary (central audit): branch `codex/handoff-refresh-20261021`, HEAD `700e96abc9eb9c58f3e1a430f464b31a1cdc24c1`, 0 dirty status entries.
+<!-- markdownlint-enable MD013 -->
+
+This is the clean worktree snapshot before the handoff-only edit.
 
 ## Acceptance criteria for production admission
 
